@@ -1,0 +1,180 @@
+ .scs-gt-overlay{position:fixed;inset:0;z-index:999999;background:rgba(5,12,25,.82);overflow:auto;padding:12px 12px calc(104px + env(safe-area-inset-bottom));color:#eef4ff}.scs-gt-sheet{max-width:850px;margin:8px auto 28px;padding:16px;background:#17253c;border:1px solid #466187;border-radius:17px;font:inherit}.scs-gt-sheet header{display:flex;justify-content:space-between;align-items:center;font-size:1.15rem;margin-bottom:14px}.scs-gt-sheet > header button,.scs-gt-sheet > nav button,.scs-gt-card button{cursor:pointer;min-height:40px;border-radius:9px;border:1px solid #55749f;background:#263c5d;color:#fff;padding:8px}.scs-gt-card{padding:14px;background:#243957;border:1px solid #526d94;border-radius:13px;margin:12px 0}.scs-gt-card h3{margin:0 0 12px}.scs-gt-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.scs-gt-fields label{display:flex;flex-direction:column;gap:6px}.scs-gt-fields input{min-width:0;padding:10px;border-radius:8px;background:#10213a;color:white;border:1px solid #7293c0;font-size:1rem}.scs-gt-primary,.scs-gt-tabs .active,.scs-gt-context-tabs .active{background:#3167b6!important}.scs-gt-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:12px 0}.scs-gt-tabs button{font-size:.75rem;min-width:0;padding:5px 2px;overflow-wrap:anywhere}.scs-gt-context-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0 14px;padding:5px;border:1px solid #466187;border-radius:13px;background:#10213a}.scs-gt-context-tabs button{border:0!important;border-radius:9px!important;background:transparent!important;font-weight:800}.scs-gt-context-tabs button.active{background:#3167b6!important}.scs-gt-bottom-nav{grid-template-columns:repeat(4,minmax(0,1fr))!important;z-index:1000002}.scs-gt-bottom-nav button:disabled{opacity:.38!important;cursor:not-allowed!important}.scs-gt-bottom-nav .scs-tm-nav-label{font-size:11px}.scs-gt-standings{overflow-x:auto}.scs-gt-head{display:grid;grid-template-columns:60px minmax(95px,1fr) 32px 36px 36px;gap:5px;padding:9px 2px;border-bottom:1px solid #526d94;font-size:.85rem}.scs-gt-empty{color:#c0cce0}.scs-gt-secondary{margin-top:12px}@media(max-width:420px){.scs-gt-sheet{padding:10px}.scs-gt-fields{grid-template-columns:1fr}.scs-gt-tabs button{font-size:.68rem}}
+.scs-gt-team{width:100%;text-align:left;background:transparent!important;border:0!important;border-bottom:1px solid #526d94!important;border-radius:0!important;color:inherit!important}
+.scs-gt-title-field{display:grid;gap:7px;margin:0 0 14px;font-weight:800}.scs-gt-title-field input{width:100%;box-sizing:border-box;padding:12px;border-radius:9px;background:#10213a;color:#fff;border:1px solid #7293c0;font:inherit}
+.scs-gt-player{display:flex;gap:12px;align-items:center;padding:10px;border-bottom:1px solid #526d94}
+.scs-gt-player input{width:20px;height:20px}
+.scs-gt-editor-backdrop{position:fixed;inset:0;z-index:1000001;background:#000a;display:flex;align-items:center;justify-content:center;padding:14px}
+.scs-gt-editor{width:min(440px,100%);max-height:90vh;overflow:auto;padding:18px;background:#243957;border:1px solid #7293c0;border-radius:16px;display:grid;gap:12px}
+.scs-gt-editor label{display:grid;gap:5px}.scs-gt-editor select{width:100%;padding:12px;background:#10213a;color:#fff;border:1px solid #7293c0;border-radius:8px}
+
+/* V143: same player badge and rating ring used in Knockout Tournament */
+.scs-gt-team{min-height:72px;height:auto!important;align-items:center}
+.scs-gt-team-players{display:flex;flex-direction:column;gap:6px;min-width:0;padding:3px 0}
+.scs-gt-team-players .scs-tm-shared-player{display:flex;align-items:center;gap:7px;min-width:0;text-align:left}
+.scs-gt-team-players .scs-tm-shared-name{overflow-wrap:anywhere;line-height:1.25}
+.scs-gt-team-players .scs-tm-ring-slot{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.scs-gt-unassigned{opacity:.85}
+.scs-gt-head{grid-template-columns:60px minmax(125px,1fr) 32px 36px 36px}
+
+/* Group setup uses the same team-card language as Knockout Assist. */
+.scs-gt-team-pool{margin-top:14px!important;border-color:#0f766e!important}
+.scs-gt-team-card-list{display:grid;gap:10px;padding:12px 0 0}
+.scs-gt-knockout-team-card{display:grid!important;grid-template-columns:34px minmax(0,1fr) 42px 42px;align-items:center;gap:10px;width:100%;min-height:78px;padding:12px!important;text-align:left;background:#142d4b!important;border:2px solid #3184df!important;border-left:7px solid #2899f0!important;border-radius:14px!important;color:#f3f6ff!important;box-shadow:0 3px 10px rgba(3,14,30,.2)}
+.scs-gt-team-card-list>button.scs-gt-knockout-team-card{grid-template-columns:34px minmax(0,1fr) 42px}
+.scs-gt-team-card-number{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#294b72;color:#cfe5ff;font-weight:850;font-size:.82rem}
+.scs-gt-team-card-players{display:flex;flex-direction:column;gap:6px;min-width:0}
+.scs-gt-team-card-group{color:#8fc5ff;font-size:.65rem;font-weight:850;letter-spacing:.1em}
+.scs-gt-team-card-players .scs-tm-shared-player{display:flex;align-items:center;gap:8px;min-width:0}
+.scs-gt-team-card-players .scs-tm-shared-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.scs-gt-team-card-edit{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#4269d7;color:#fff;font-size:1rem;font-weight:850}
+.scs-gt-team-card-players{border:0!important;background:transparent!important;padding:0!important;color:inherit!important;text-align:left!important}
+.scs-gt-team-card-remove{display:grid;place-items:center;width:36px;height:36px;padding:0!important;border:1px solid #a85e78!important;border-radius:10px!important;background:#542b40!important;color:#fff!important;font-size:1.25rem!important}
+.scs-gt-knockout-team-card:hover{border-color:#62aaf5!important;background:#183657!important}
+.scs-gt-knockout-team-card:focus-visible{outline:3px solid #8fc5ff;outline-offset:2px}
+@media(max-width:380px){.scs-gt-knockout-team-card{grid-template-columns:28px minmax(0,1fr) 35px 35px;padding:10px!important;gap:6px}.scs-gt-team-card-number{width:27px;height:27px}.scs-gt-team-card-edit,.scs-gt-team-card-remove{width:33px;height:33px}}
+
+.scs-gt-court,.scs-gt-fixture{padding:12px;margin:8px 0;border:1px solid #5a7aa7;border-radius:11px;background:#1b2e4a}.scs-gt-fixture div{padding:7px 0}.scs-gt-court-controls{display:flex;justify-content:space-between;align-items:center}.scs-gt-fixture button{margin-left:10px}
+
+
+/* Match Center presentation is owned by tournament-bracket.css, shared by both modules. */
+
+/* V149 — standings redesign only. Existing fields and rating/gender rings retained. */
+.scs-gt-standings{overflow-x:visible;display:grid;gap:9px;min-width:0}
+.scs-gt-standings>.scs-gt-head:first-child{background:#1b3354;border:1px solid #36547e;border-radius:11px;padding:12px 10px;color:#bcd6ff;font-weight:700;min-height:43px}
+.scs-gt-standings .scs-gt-head{grid-template-columns:minmax(44px,15%) minmax(0,1fr) minmax(25px,8%) minmax(29px,9%) minmax(32px,11%);column-gap:5px;align-items:center;box-sizing:border-box;font-size:clamp(.69rem,2.9vw,.92rem);text-align:center}
+.scs-gt-standings .scs-gt-head>span:nth-child(2){text-align:left;min-width:0}
+.scs-gt-standings .scs-gt-result-row,.scs-gt-standings button.scs-gt-team{padding:13px 9px!important;min-height:100px;border:1px solid #466993!important;border-radius:15px!important;background:linear-gradient(120deg,#1a3050,#1b2d49)!important;box-shadow:0 2px 8px #06101e3d;overflow:hidden}
+.scs-gt-standings .scs-gt-result-row:first-of-type{border-color:#3c9a80!important}
+.scs-gt-standings .scs-gt-team>span:first-child{display:grid;place-items:center;justify-self:center;width:35px;height:35px;border-radius:50%;background:#3a567b;font-size:1rem;font-weight:750;color:#fff}
+.scs-gt-standings .scs-gt-result-row:nth-child(2)>span:first-child{background:#299e78}
+.scs-gt-standings .scs-gt-result-row:nth-child(3)>span:first-child{background:#277fd0}
+.scs-gt-standings .scs-gt-team>span:nth-child(n+3){font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:normal}
+.scs-gt-standings .scs-gt-team-players{gap:8px;padding:2px 0}
+.scs-gt-standings .scs-gt-team-players .scs-tm-shared-player{gap:6px;font-weight:650}
+.scs-gt-standings .scs-gt-team-players .scs-tm-shared-name{overflow-wrap:anywhere;word-break:normal}
+.scs-gt-standings .scs-gt-team>span:nth-child(3){border-left:1px solid #416082;padding-left:3px}
+@media(max-width:380px){.scs-gt-standings .scs-gt-head{grid-template-columns:44px minmax(0,1fr) 25px 28px 30px;gap:3px;font-size:.69rem}.scs-gt-standings .scs-gt-result-row,.scs-gt-standings button.scs-gt-team{padding:11px 5px!important}.scs-gt-standings .scs-gt-team>span:first-child{width:30px;height:30px}}
+
+/* Group Assist index: follows the existing Knockout Assist five-step interface. */
+.scs-gt-assist{max-width:720px;margin:auto;padding:12px 4px}.scs-gt-assist header{margin-bottom:28px!important}.scs-gt-assist h2{margin:0}.scs-gt-assist>p{margin:24px 0}.scs-gt-assist-step{display:flex;align-items:center;gap:15px;width:100%;text-align:left;color:white;border:0;border-radius:16px;padding:22px 18px;margin:12px 0;min-height:90px}.scs-gt-assist-step>b{font-size:28px}.scs-gt-assist-step>span:nth-child(2){flex:1;display:grid;gap:3px}.scs-gt-assist-step small{font-size:12px}.scs-gt-assist-step:disabled{cursor:not-allowed}.scs-gt-assist-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.scs-gt-assist-top button{padding:10px;border-radius:20px;background:#263c5d;color:white;border:1px solid #55749f}.scs-gt-assist-top small{color:#aec8f3;font-weight:700}.scs-gt-sheet>[data-assist-done],.scs-gt-sheet>.scs-gt-primary{padding:12px 22px;border-radius:12px;color:#fff;border:1px solid #7293c0;min-height:48px}
+
+/* V195: Team Tournament uses existing Group Tournament player rows.
+   Override the older generic tournament editor label/input rules only here. */
+.scs-tm-entry-modal .scs-tm-pool[data-player-list]{
+  display:flex;flex-direction:column;gap:0;max-height:min(42dvh,360px);
+  overflow-y:auto;overflow-x:hidden;padding:4px 12px;margin:12px 0;
+  -webkit-overflow-scrolling:touch;min-width:0;
+}
+.scs-tm-entry-modal .scs-tm-pool .scs-gt-player{
+  display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:12px;min-height:54px;margin:0;padding:9px 4px;
+  width:100%;box-sizing:border-box;min-width:0;
+  border-bottom:1px solid #526d94;cursor:pointer;
+}
+.scs-tm-entry-modal .scs-tm-pool .scs-gt-player input[type="checkbox"]{
+  display:block;flex:0 0 22px;width:22px;height:22px;min-height:22px;
+  padding:0;margin:0;accent-color:#399bff;
+}
+.scs-tm-entry-modal .scs-tm-pool .scs-gt-player>span{
+  display:flex;align-items:center;flex:1 1 auto;min-width:0;width:auto;
+}
+.scs-tm-entry-modal .scs-tm-pool .scs-tm-shared-player{
+  display:flex;align-items:center;flex-direction:row;gap:10px;min-width:0;width:100%;
+}
+.scs-tm-entry-modal .scs-tm-pool .scs-tm-shared-name{
+  display:block;min-width:0;overflow-wrap:normal;word-break:normal;
+  white-space:normal;line-height:1.3;text-align:left;
+}
+.scs-tm-entry-modal .scs-tm-import-actions{
+  position:sticky;bottom:-24px;z-index:2;background:#21324b;
+  padding:12px 0 6px;margin-top:8px;
+}
+.scs-tm-entry-modal .scs-tm-pool-heading{flex-wrap:wrap;align-items:center}
+.scs-tm-entry-modal .scs-tm-pool-heading h3{padding-right:0;min-width:0}
+@media(max-width:480px){
+ .scs-tm-entry-modal{padding:10px}
+ .scs-tm-entry-modal .scs-tm-entry-editor{padding:18px 14px;max-height:90dvh}
+ .scs-tm-entry-modal .scs-tm-pool[data-player-list]{max-height:38dvh}
+}
+
+/* V356: Knockout and Group Match Center presentation only.
+   Mirrors the existing Team Tournament Match Center chrome without altering
+   shared-match-center.js, Team Tournament code, or match operations. */
+.scs-tm-unified-match-center{width:100%;min-width:0}
+.scs-tm-unified-match-center .scs-tm-live-center{width:100%;max-width:none;box-sizing:border-box;margin:8px 0 12px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}
+.scs-tm-unified-match-center .scs-tm-live-courts{grid-template-columns:minmax(0,1fr)!important;gap:10px;width:100%}
+.scs-tm-unified-match-center .scs-tm-court-card:not(.is-free){border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;margin:0!important;width:100%;max-width:none}
+.scs-tm-unified-match-center .scs-tm-court-card:not(.is-free)>.scs-tm-court-head{margin:0 0 5px;padding:5px 2px;background:transparent}
+.scs-tm-unified-match-center .scs-tm-court-card:not(.is-free)>button{display:block;width:100%;margin:8px 0 12px!important}
+.scs-tm-unified-match-center .scs-tm-completed-row{width:100%;max-width:none;box-sizing:border-box;background:#101d30!important;border:1px solid #456b9b!important;border-radius:15px;box-shadow:none!important;overflow:hidden}
+.scs-tm-unified-match-center .scs-tm-completed-title{background:#1a2940!important;border-left:0!important}
+.scs-tm-unified-match-center .scs-tm-completed-content,.scs-tm-unified-match-center .scs-tm-completed-vs{background:#101d30!important}
+body.light-mode .scs-tm-unified-match-center .scs-tm-completed-row,body.light-mode .scs-tm-unified-match-center .scs-tm-completed-content,body.light-mode .scs-tm-unified-match-center .scs-tm-completed-vs{background:#f0f3f8!important}
+
+/* Match the Knockout fixture action: one primary action spans the card. */
+.scs-gt-overlay .scs-ko-fixture-actions button{
+  flex:1 1 100%!important;
+  width:100%!important;
+}
+.scs-gt-matches-page>.scs-gt-generated-fixtures{
+  margin:14px 0 0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.scs-gt-matches-page>.scs-gt-generated-fixtures>h3{margin:4px 0 16px;font-size:1.2rem}
+body.light-mode .scs-tm-unified-match-center .scs-tm-completed-title{background:#e0e7f1!important}
+
+/* V400: Group Assist uses Knockout's compact team and roster layout. */
+.scs-gt-assist-team-list{display:grid;gap:10px;padding:12px 0}
+.scs-gt-assist-team-list .scs-tm-compact-team{min-width:0}
+.scs-gt-assist-team-list .scs-tm-compact-team-head button{min-height:34px;padding:4px 11px;margin-left:6px;border:1px solid #6388b8;border-radius:8px;background:#28476d;color:#fff}
+.scs-gt-assist-team-list .scs-tm-compact-player{min-width:0}
+.scs-gt-sheet .scs-tm-player-pool .scs-tm-pool-chips{display:flex;flex-direction:column;gap:8px;padding:10px 0}
+.scs-gt-sheet .scs-tm-player-pool .scs-api-roster-row{display:flex;min-width:0;padding:9px 11px;background:#34486a;border:1px solid #53739a;border-radius:10px}
+.scs-gt-sheet .scs-match-player-identity{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.scs-gt-sheet .scs-match-player-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:35px}
+
+/* V401: Group Assist uses Knockout's compact team cards and action menu. */
+.scs-gt-overlay .scs-tm-compact-team{position:relative;min-width:0;background:#1c3555;border:1px solid #53759d;border-left:5px solid #2598e8;border-radius:12px;padding:12px;overflow:visible}
+.scs-gt-overlay .scs-tm-compact-team-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700}
+.scs-gt-overlay .scs-tm-compact-players{display:grid;gap:8px;padding-top:10px}
+.scs-gt-overlay .scs-tm-compact-actions{position:relative;z-index:2}
+.scs-gt-overlay .scs-tm-compact-actions summary{list-style:none;display:grid;place-items:center;width:38px;height:36px;border-radius:9px;background:#365fb0;color:white;font-size:24px;cursor:pointer}
+.scs-gt-overlay .scs-tm-compact-actions summary::-webkit-details-marker{display:none}
+.scs-gt-overlay .scs-tm-compact-action-menu{position:absolute;right:0;top:38px;z-index:20;display:flex;flex-direction:column;min-width:155px;padding:5px;border:1px solid #7394c5;border-radius:10px;background:#243854;box-shadow:0 8px 18px #0008}
+.scs-gt-overlay .scs-tm-compact-action-menu button{border:0;background:transparent;color:white;text-align:left;min-height:42px;padding:8px;font:inherit}
+.scs-gt-overlay .scs-tm-compact-action-menu button:last-child{color:#ffb3b3}
+.scs-gt-overlay .scs-api-player-selector{position:fixed;inset:0;z-index:1000005;display:flex;align-items:center;justify-content:center;background:#050d1bcc}
+
+/* Group matrix uses Team Tournament matrix styles. */
+.scs-gt-sheet .scs-team-matrix{padding:12px 2px 22px;min-width:0}.scs-gt-sheet .scs-team-matrix h4{margin:20px 0 10px;color:#b6cbeb}.scs-gt-sheet .scs-team-matrix-scroll{margin-bottom:18px}
+
+/* V410: independent stage tabs inside Group Matrix */
+.scs-gt-sheet .scs-gt-matrix-tabs{display:flex;gap:8px;overflow-x:auto;max-width:100%;padding:4px 0 12px;margin:10px 0 14px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.scs-gt-sheet .scs-gt-matrix-tabs button{flex:0 0 auto;white-space:nowrap;padding:11px 15px;border:1px solid #577399;border-radius:12px;background:#283b59;color:#e5ebf9;font:inherit;font-weight:600}
+.scs-gt-sheet .scs-gt-matrix-tabs button.active{color:#a78bfa;border-color:#9775fa;box-shadow:inset 0 -3px #9775fa}
+.scs-gt-sheet .scs-gt-matrix-knockout-empty{border:1px solid #4a6389;border-radius:14px;padding:16px;margin-top:14px}
+
+/* V411: Group Matches uses the existing Matrix tab styling. */
+.scs-gt-matches-tabs,.scs-gt-match-status-tabs{margin:12px 0 16px}
+.scs-gt-match-status-tabs button{font-size:.9em}
+
+/* V412: Group event stage tiles */
+.scs-gt-stage-home{padding:18px;min-height:65vh;color:#eaf1ff}
+.scs-gt-stage-home header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.scs-gt-stage-home header h2{margin:0;overflow-wrap:anywhere}
+.scs-gt-stage-home [data-stage-back]{border:1px solid #6382ad;border-radius:12px;background:#273c5c;color:#fff;padding:12px}
+.scs-gt-stage-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.scs-gt-stage-tile{display:flex;flex-direction:column;align-items:flex-start;gap:12px;text-align:left;padding:20px 14px;min-height:205px;border:1px solid #5687bf;border-radius:18px;background:#1b3453;color:#eff5ff;min-width:0}
+.scs-gt-stage-tile strong{font-size:1.1rem}
+.scs-gt-stage-tile small{color:#bacce5;line-height:1.5}
+.scs-gt-stage-icon{font-size:2rem}
+.scs-gt-stage-label{margin-top:auto;color:#9fd1ff;font-weight:700}
+.scs-gt-stage-tile:disabled{opacity:.63;cursor:not-allowed}
+.scs-gt-stage-knockout{border-color:#8c7aaf;background:#272c4a}
+@media(max-width:360px){.scs-gt-stage-tiles{grid-template-columns:1fr}}
+
+/* V414: Knockout launch button in the matrix */
+.scs-gt-sheet .scs-gt-matrix-knockout-empty .scs-gt-knockout-launch{display:block;width:100%;min-height:52px;margin-top:22px;padding:12px 18px;border:1px solid #86b8ff;border-radius:12px;background:#3167b6!important;color:#fff!important;font:inherit;font-size:1rem;font-weight:750;text-align:center;cursor:pointer;touch-action:manipulation}

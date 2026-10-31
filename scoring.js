@@ -1,0 +1,160 @@
+(function(){
+'use strict';
+var state=null,clubPlayers=[],setupServer=0,setupReceiver=2,liveMatch=null,scoreSyncChain=Promise.resolve(),readOnly=false,readOnlySet=0,conductMode=false,teamEditMatchId=null,savedScoreEditor=null,scoreEditDirty=false;
+function el(id){return document.getElementById(id)}
+function playerSelects(){return ['scsScoreP1','scsScoreP2','scsScoreP3','scsScoreP4'].map(el)}
+function names(){return playerSelects().map(function(x,i){var o=x&&x.options[x.selectedIndex];return o&&o.value?o.textContent.trim():('Player '+(i+1));});}
+function teamOf(p){return p<2?0:1}
+function partner(p){return p<2?(p===0?1:0):(p===2?3:2)}
+function setSetupMsg(msg){var x=el('scsScoreSetupMsg');if(x)x.textContent=msg||'';}
+function normalizePlayers(list){var seen={};return (list||[]).map(function(p){var n=String((p&&(p.name||p.displayName||p.nickname))||'').trim();return {id:String((p&&(p.id||p.player_id||p.playerId))||n),name:n,gender:String((p&&p.gender)||'Male')};}).filter(function(p){var k=p.id+'|'+p.name.toLowerCase();if(!p.name||seen[k])return false;seen[k]=1;return true;});}
+function currentClubName(){try{return localStorage.getItem('kbrr_org_club_name')||((typeof getMyClub==='function'&&getMyClub().name)||'')||'';}catch(e){return '';}}
+function playerGender(name){var key=String(name||'').trim().toLowerCase(),p=clubPlayers.find(function(x){return x.name.toLowerCase()===key;});return p&&p.gender==='Female'?'Female':'Male';}
+function playerRow(name){var g=playerGender(name);return '<span class="scs-score-picker-player"><img src="'+(g==='Female'?'female.png':'male.png')+'" alt="'+g+'"><b>'+escapeHtml(name)+'</b></span>';}
+async function loadClubPlayers(){var list=[];try{if(typeof dbGetPlayers==='function')list=await dbGetPlayers(false);}catch(e){}if(!list.length&&window.schedulerState&&Array.isArray(schedulerState.allPlayers))list=schedulerState.allPlayers;clubPlayers=normalizePlayers(list);populatePlayerSelects();}
+function populatePlayerSelects(){var sels=playerSelects(),old=sels.map(function(x){return x.value});sels.forEach(function(sel,i){sel.innerHTML='<option value="">Select player</option>';clubPlayers.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o)});if(old[i]&&clubPlayers.some(function(p){return p.id===old[i]}))sel.value=old[i];});updateDuplicateOptions();if(!clubPlayers.length)setSetupMsg('No registered players found for the current club.');}
+function updateDuplicateOptions(){var sels=playerSelects(),chosen=sels.map(function(s){return s.value}).filter(Boolean);sels.forEach(function(sel){Array.prototype.forEach.call(sel.options,function(o){o.disabled=!!o.value&&o.value!==sel.value&&chosen.indexOf(o.value)>=0;});});var btn=document.querySelector('.scs-score-start-btn');if(btn){var ids=sels.map(function(s){return s.value});btn.disabled=ids.some(function(v){return !v;})||new Set(ids).size!==4;}}
+function playerChanged(){updateDuplicateOptions();setSetupMsg('');}
+function refreshSetupNames(){updateDuplicateOptions();}
+async function open(){
+  conductMode=false,teamEditMatchId=null;
+  return openPicker();
+}
+async function openConduct(){
+  conductMode=true;
+  return openPicker();
+}
+async function openPicker(){
+  el('scsScoringOverlay').hidden=false; el('scsScoreSetup').hidden=true; el('scsScoreSetup').classList.remove('scs-live-match-setup'); el('scsScoreLive').hidden=true; el('scsScoreMatchPicker').hidden=false;
+  state=null; liveMatch=null; setupServer=0; setupReceiver=2;
+  var box=el('scsScoreMatchPicker'); box.innerHTML='<div class="scs-score-picker-loading">Loading live matches…</div>';
+  try{
+    try{clubPlayers=normalizePlayers(typeof dbGetPlayers==='function'?await dbGetPlayers(false):[]);}catch(_){clubPlayers=[];}
+    var sessions=typeof dbGetLiveSessions==='function'?await dbGetLiveSessions():[];
+    var matches=[];
+    (sessions||[]).forEach(function(sess){var rounds=sess.rounds_data||[];if(!rounds.length)return;var round=rounds[rounds.length-1];(round.games||[]).forEach(function(g,gi){
+      var winnerOn = g.winnerEnabled===true || round.winnerEnabled===true;
+      var tournament=!!round.tournament,available=winnerOn&&!g.winner&&!g.conduct_finished&&((conductMode&&g.score_status==='scored')||(g.score_status!=='scored'));
+      if(available) matches.push({sessionId:sess.id,round:round.round,court:g.court||gi+1,pair1:g.pair1||[],pair2:g.pair2||[],game:g,courtCenter:round.courtCenter===true,tournament:tournament,matchNo:g.match_no||g.tournament_match||'',scoreReady:g.score_status==='scored'});
+    });});
+    /* Tournament matches are locally persisted and need no Supabase session. */
+    if(window.SCSCourtCenter&&SCSCourtCenter.localSession){var ls=SCSCourtCenter.localSession();if(ls&&ls.rounds_data&&ls.rounds_data[0]){(ls.rounds_data[0].games||[]).forEach(function(g){if(g.court&&g.court_center_status!=='approved'&&!g.conduct_finished&&((conductMode&&g.score_status==='scored')||(g.score_status!=='scored'&&!g.winner))){matches.push({sessionId:ls.id,round:1,court:g.court,pair1:g.pair1||[],pair2:g.pair2||[],game:g,courtCenter:true,tournament:true,matchNo:g.match_no||g.tournament_match||'',scoreReady:g.score_status==='scored'})}})}}
+    /* Team Tournament uses the same scorer and Conduct a Match picker as Group. */
+    if(window.SCSTeamTournament&&typeof SCSTeamTournament.conductMatches==='function'){
+      SCSTeamTournament.conductMatches().forEach(function(tm){
+        if(tm.status!=='playing'&&tm.status!=='score_ready')return;
+        if(!tm.court||!tm.pair1||!tm.pair2)return;
+        if(matches.some(function(existing){return existing.sessionId==='local-team-'+tm.id}))return;
+        matches.push({sessionId:'local-team-'+tm.id,groupId:tm.id,round:1,court:tm.court,pair1:tm.pair1,pair2:tm.pair2,game:{score:tm.score,winner:tm.winner},courtCenter:true,tournament:true,matchNo:tm.label,scoreReady:tm.status==='score_ready'});
+      });
+    }
+    renderLiveMatches(matches);
+  }catch(e){box.innerHTML='<div class="scs-score-picker-empty">Could not load live matches.</div>';}
+}
+function openGroupMatch(m){
+ el('scsScoringOverlay').hidden=false;el('scsScoreLive').hidden=true;el('scsScoreMatchPicker').hidden=true;state=null;liveMatch=null;setupServer=0;setupReceiver=2;
+ selectLiveMatch(m);
+}
+function scoreSummaryForPicker(m){var s=m&&m.game&&m.game.score;if(!s)return '';var sets=Array.isArray(s.completedSets)?s.completedSets:[];if(sets.length)return sets.map(function(x){return (x.score||[0,0]).join('–')}).join(' | ');var a=Array.isArray(s.currentScore)?s.currentScore:[0,0];return a[0]+'–'+a[1];}
+function renderLiveMatches(matches){var box=el('scsScoreMatchPicker'),club=currentClubName();var title=conductMode?'Conduct a Match':'Score a Match',help=conductMode?'Assigned matches ready for scoring.':'Select a court to start scoring.';var head='<div class="scs-score-picker-title"><h2>'+title+'</h2><strong>'+escapeHtml(club||'Select a club')+'</strong><p>'+help+'</p></div>';if(!matches.length){box.innerHTML=head+'<div class="scs-score-picker-empty">'+(conductMode?'No assigned matches ready to conduct.':'No available live matches to score.')+'</div>';return;}box.innerHTML=head;matches.forEach(function(m,i){if(m.scoreReady&&conductMode&&window.SCSSharedMatchCenter){var wrap=document.createElement('div');var winner=m.game&&m.game.winner==='L'?'left':m.game&&m.game.winner==='R'?'right':null;wrap.innerHTML=SCSSharedMatchCenter.completed({number:m.matchNo||m.court,title:'Court '+m.court+(m.matchNo?' · Match '+m.matchNo:''),left:(m.pair1||[]).join(' / '),right:(m.pair2||[]).join(' / '),leftPlayers:m.pair1||[],rightPlayers:m.pair2||[],score:scoreSummaryForPicker(m),winner:winner,action:'data-conduct-finish="1"',actionLabel:'Finish Match',actionClass:'scs-conduct-finish'});var card=wrap.firstElementChild;card.querySelector('[data-conduct-finish]').addEventListener('click',function(){finishConductMatch(m);});box.appendChild(card);return;}var card=document.createElement('div');card.className='scs-score-live-match '+(i%2?'court-alt':'');card.innerHTML='<span class="scs-score-picker-court"><strong>COURT '+escapeHtml(m.court)+'</strong><em>'+(m.tournament?('Tournament'+(m.matchNo?' · '+escapeHtml(m.matchNo):'')):(m.courtCenter?'Court Center':'Round '+escapeHtml(m.round)))+'</em><i aria-hidden="true">›</i></span><span class="scs-score-picker-team">'+(m.pair1||[]).map(playerRow).join('')+'</span><span class="scs-score-picker-vs"><span></span><b>VS</b><span></span></span><span class="scs-score-picker-team">'+(m.pair2||[]).map(playerRow).join('')+'</span><button type="button" class="scs-conduct-start">Start Scoring</button>';card.querySelector('button').addEventListener('click',function(){selectLiveMatch(m);});box.appendChild(card);});}
+
+async function finishConductMatch(m){if(!m||!m.tournament)return;var ok=false;if(String(m.sessionId||'').indexOf('local-team-')===0&&window.SCSTeamTournament&&SCSTeamTournament.finishConductMatch)ok=SCSTeamTournament.finishConductMatch(m.groupId);else if(String(m.sessionId||'').indexOf('local-tournament-')===0&&window.SCSCourtCenter&&SCSCourtCenter.finishConductMatch)ok=await SCSCourtCenter.finishConductMatch(m.game&&m.game.ccid);else if(typeof window.dbFinishTournamentConductMatch==='function')ok=await window.dbFinishTournamentConductMatch(m.sessionId,m.game&&m.game.ccid);if(ok)openConduct();}
+
+function selectLiveMatch(m){liveMatch=m;el('scsScoreMatchPicker').hidden=true;el('scsScoreSetup').hidden=false;el('scsScoreSetup').classList.add('scs-live-match-setup');var all=(m.pair1||[]).concat(m.pair2||[]);clubPlayers=all.map(function(n,i){return{id:'live-'+i,name:n};});populatePlayerSelects();playerSelects().forEach(function(sel,i){sel.value='live-'+i;sel.disabled=true;});updateDuplicateOptions();var h=el('scsScoreSetup').querySelector('h2'),p=el('scsScoreSetup').querySelector('p');if(h)h.textContent=(m.courtCenter?'Court Center':'Round '+m.round)+' · Court '+m.court;if(p)p.textContent=m.pair1.join(' / ')+' vs '+m.pair2.join(' / ');setSetupMsg('');}
+
+function openCompleted(score){
+  if(!score||!Array.isArray(score.names)||score.names.length<4)return;
+  readOnly=true; liveMatch=null;teamEditMatchId=null;
+  state={names:score.names.slice(0,4),score:Array.isArray(score.currentScore)?score.currentScore.slice():[0,0],server:Number.isInteger(score.server)?score.server:0,initialServer:Number.isInteger(score.initialServer)?score.initialServer:0,initialReceiver:Number.isInteger(score.initialReceiver)?score.initialReceiver:2,positions:Array.isArray(score.positions)?score.positions.map(function(x){return x.slice();}):makePositions(0,2),entries:Array.isArray(score.entries)?score.entries.map(function(x){return{player:x.player,score:x.score,team:x.team};}):[],history:Array.isArray(score.history)?JSON.parse(JSON.stringify(score.history)):[],finished:true,buttonOrder:'ab',matchSets:score.matchSets===3?3:1,setRules:Array.isArray(score.setRules)?score.setRules.map(function(x){return{win:x.win,max:x.max};}):[{win:15,max:21}],currentSet:Number(score.currentSet)||1,completedSets:Array.isArray(score.completedSets)?score.completedSets.map(function(x){return{set:x.set,score:Array.isArray(x.score)?x.score.slice():[0,0],winner:x.winner,server:x.server,positions:Array.isArray(x.positions)?x.positions.map(function(p){return p.slice();}):null,entries:Array.isArray(x.entries)?x.entries.map(function(e){return{player:e.player,score:e.score,team:e.team};}):[],originalEntries:Array.isArray(x.originalEntries)?JSON.parse(JSON.stringify(x.originalEntries)):undefined,corrections:Array.isArray(x.corrections)?JSON.parse(JSON.stringify(x.corrections)):undefined,manuallyCorrected:x.manuallyCorrected===true};}):[],setWins:Array.isArray(score.setWins)?score.setWins.slice():[0,0]};
+  el('scsScoringOverlay').hidden=false;el('scsScoreMatchPicker').hidden=true;el('scsScoreSetup').hidden=true;el('scsScoreLive').hidden=false;
+  readOnlySet=state.completedSets.length?state.completedSets[state.completedSets.length-1].set:state.currentSet;
+  if(readOnlySet)selectCompletedSet(readOnlySet,true);else render(false);
+  var actions=document.querySelector('.scs-score-side-actions'),controls=document.querySelector('.scs-score-controls'),send=el('scsScoreSendResult');
+  if(actions)actions.hidden=true;if(controls)controls.hidden=true;if(send)send.hidden=true;
+  requestAnimationFrame(function(){var w=el('scsScoreTableWrap');if(w)w.scrollLeft=0;});
+}
+
+function openEditableCompleted(id,score,onSave){
+ if(!score||!Array.isArray(score.names)||score.names.length!==4||typeof onSave!=="function")return false;
+ openCompleted(score);teamEditMatchId=id;savedScoreEditor=onSave;scoreEditDirty=false;render(false);
+ var send=el("scsScoreSendResult");if(send){send.hidden=true;send.disabled=false;send.textContent="Finish & Send Result";}return true;
+}
+function openTeamCompleted(id,score){
+ if(!score||!Array.isArray(score.names)||score.names.length!==4)return false;
+ return openEditableCompleted(id,score,function(payload,winner){return window.SCSTeamTournament&&SCSTeamTournament.updateCompletedScore(id,payload,winner);});
+ /* legacy controls */
+ openCompleted(score);teamEditMatchId=id;render(false);
+ var send=el('scsScoreSendResult');if(send){send.hidden=false;send.disabled=false;send.textContent='Save Changes';}
+ var controls=document.querySelector('.scs-score-controls');if(controls)controls.hidden=true;
+ return true;
+}
+function editSavedSet(n){
+ if(!teamEditMatchId||!state)return;
+ var set=state.completedSets.find(function(x){return Number(x.set)===Number(n);});
+ if(!set)return;
+ var input=prompt('Set '+n+' score (Govi/left – Jay/right). Enter two numbers separated by a dash:',set.score.join('-'));
+ if(input===null)return;
+ var match=input.trim().match(/^(\d+)\s*[-–:,/]\s*(\d+)$/);
+ if(!match){alert('Enter scores as 14-15.');return;}
+ var a=Number(match[1]),b=Number(match[2]);
+ if(a===set.score[0]&&b===set.score[1])return;
+ if(a===b||a>99||b>99){alert('Set scores must have a winner and be between 0 and 99.');return;}
+ if(!Array.isArray(set.originalEntries))set.originalEntries=Array.isArray(set.entries)?JSON.parse(JSON.stringify(set.entries)):[];
+ if(!Array.isArray(set.corrections))set.corrections=[];
+ set.corrections.push({previousScore:set.score.slice(),newScore:[a,b],at:new Date().toISOString()});
+ set.score=[a,b];set.winner=a>b?0:1;set.entries=[];set.manuallyCorrected=true;scoreEditDirty=true;
+ state.setWins=[0,0];state.completedSets.forEach(function(x){state.setWins[x.winner]++;});
+ selectCompletedSet(n,true);render(false);
+ var send=el('scsScoreSendResult');if(send){send.hidden=false;send.textContent='Finish & Send Result';}
+}
+function scorePayload(){if(!state)return null;return{names:state.names.slice(),currentSet:state.currentSet,currentScore:state.score.slice(),server:state.server,initialServer:state.initialServer,initialReceiver:state.initialReceiver,positions:state.positions.map(function(x){return x.slice();}),entries:state.entries.map(function(x){return{player:x.player,score:x.score,team:x.team};}),completedSets:state.completedSets.map(function(x){return{set:x.set,score:x.score.slice(),winner:x.winner,server:x.server,positions:x.positions?x.positions.map(function(p){return p.slice();}):null,entries:Array.isArray(x.entries)?x.entries.map(function(e){return{player:e.player,score:e.score,team:e.team};}):[],originalEntries:Array.isArray(x.originalEntries)?JSON.parse(JSON.stringify(x.originalEntries)):undefined,corrections:Array.isArray(x.corrections)?JSON.parse(JSON.stringify(x.corrections)):undefined,manuallyCorrected:x.manuallyCorrected===true};}),history:Array.isArray(state.history)?JSON.parse(JSON.stringify(state.history)):[],setWins:state.setWins.slice(),matchSets:state.matchSets,setRules:state.setRules.map(function(x){return{win:x.win,max:x.max};}),finished:state.finished===true};}
+function syncLiveScore(winner){if(!liveMatch)return scoreSyncChain;var m=liveMatch,payload=scorePayload();scoreSyncChain=scoreSyncChain.catch(function(){}).then(function(){if(String(m.sessionId).indexOf('local-team-')===0)return window.SCSTeamTournament&&SCSTeamTournament.scoreUpdate(m.groupId,payload,winner||null);if(String(m.sessionId).indexOf('local-group-')===0)return window.SCSGroupTournament&&SCSGroupTournament.scoreUpdate(m.groupId,payload,winner||null);if(String(m.sessionId).indexOf('local-tournament-')===0)return window.SCSCourtCenter&&SCSCourtCenter.localScoreUpdate(m.sessionId,m.court,m.pair1,m.pair2,payload,winner||null);if(typeof dbUpdateLiveMatchScore==='function')return dbUpdateLiveMatchScore(m.sessionId,m.round,m.court,m.pair1,m.pair2,payload,winner||null);return false});return scoreSyncChain;}
+async function sendResult(){if(teamEditMatchId){
+ var id=teamEditMatchId;
+ if(!scoreEditDirty||!state||!state.completedSets.length)return;
+ var wins=[0,0];state.completedSets.forEach(function(x){wins[x.score[0]>x.score[1]?0:1]++;});
+ if(wins[0]===wins[1]){alert('Set wins are tied. Correct the set scores before saving.');return;}
+ state.setWins=wins;state.finished=true;
+ var btn=el('scsScoreSendResult');if(btn){btn.disabled=true;btn.textContent='Sending…';}
+ var ok=false;try{ok=await savedScoreEditor(scorePayload(),wins[0]>wins[1]?'L':'R');}catch(error){console.error('Score correction save failed:',error);}
+ if(ok){scoreEditDirty=false;close();}else{if(btn){btn.disabled=false;btn.textContent='Finish & Send Result';}alert('Could not save the corrected score.');}return;
+ }if(!state||!state.finished||!liveMatch)return;var mw=state.setWins[0]>state.setWins[1]?0:1,winner=mw===0?'L':'R';var btn=el('scsScoreSendResult');if(btn){btn.disabled=true;btn.textContent='Sending…'}await scoreSyncChain.catch(function(){});var m=liveMatch,ok=String(m.sessionId).indexOf('local-team-')===0?(window.SCSTeamTournament&&SCSTeamTournament.scoreUpdate(m.groupId,scorePayload(),winner)):String(m.sessionId).indexOf('local-group-')===0?(window.SCSGroupTournament&&SCSGroupTournament.scoreUpdate(m.groupId,scorePayload(),winner)):String(m.sessionId).indexOf('local-tournament-')===0?(window.SCSCourtCenter&&SCSCourtCenter.localScoreUpdate(m.sessionId,m.court,m.pair1,m.pair2,scorePayload(),winner)):await dbUpdateLiveMatchScore(m.sessionId,m.round,m.court,m.pair1,m.pair2,scorePayload(),winner);if(ok){if(conductMode){state=null;liveMatch=null;el('scsScoreLive').hidden=true;el('scsScoreSetup').hidden=true;await openPicker();}else close()}else if(btn){btn.disabled=false;btn.textContent='Finish Scoring';setSetupMsg('Could not save result. Please try again.')}}
+function close(){if(window.SCSGroupTournament&&SCSGroupTournament.returnFromScore)SCSGroupTournament.returnFromScore();if(window.SCSTournament&&SCSTournament.returnFromScore)SCSTournament.returnFromScore();var returnToTournament=conductMode;if(teamEditMatchId&&window.SCSTeamTournament)SCSTeamTournament.returnFromScore();if(liveMatch&&String(liveMatch.sessionId||'').indexOf('local-team-')===0&&window.SCSTeamTournament)SCSTeamTournament.returnFromScore();if(liveMatch&&String(liveMatch.sessionId||'').indexOf('local-group-')===0&&window.SCSGroupTournament)SCSGroupTournament.returnFromScore();el('scsScoringOverlay').hidden=true;state=null;liveMatch=null;teamEditMatchId=null;savedScoreEditor=null;readOnly=false;readOnlySet=0;var actions=document.querySelector('.scs-score-side-actions'),controls=document.querySelector('.scs-score-controls');if(actions)actions.hidden=false;if(controls)controls.hidden=false;if(returnToTournament&&window.scsTournamentReturnPage&&typeof window.scsReturnToTournamentParent==='function')window.scsReturnToTournamentParent();}
+function makePositions(server,receiver){var pos=[[null,null],[null,null]],st=teamOf(server),rt=1-st;pos[st][0]=server;pos[st][1]=partner(server);pos[rt][0]=receiver;pos[rt][1]=partner(receiver);return pos;}
+function selectedMatchFormat(){var x=document.querySelector('input[name="scsScoreMatchFormat"]:checked');return x&&x.value==='3'?3:1;}
+function matchFormatChanged(){var three=selectedMatchFormat()===3;document.querySelectorAll('.scs-score-set-rule').forEach(function(r){var n=Number(r.getAttribute('data-set'));r.hidden=!three&&n>1;});}
+function readSetRules(count){var rules=[];for(var i=1;i<=count;i++){var w=Math.max(1,parseInt(el('scsScoreSet'+i+'Win').value,10)||1),m=Math.max(w,parseInt(el('scsScoreSet'+i+'Max').value,10)||w);el('scsScoreSet'+i+'Win').value=w;el('scsScoreSet'+i+'Max').value=m;rules.push({win:w,max:m});}return rules;}
+function start(){var sels=playerSelects(),ids=sels.map(function(s){return s.value});if(ids.some(function(v){return !v;})){setSetupMsg('Select all four players.');return}if(new Set(ids).size!==4){setSetupMsg('Each player can be selected only once.');return}var ns=names(),matchSets=selectedMatchFormat();state={names:ns,score:[0,0],server:setupServer,initialServer:setupServer,initialReceiver:setupReceiver,positions:makePositions(setupServer,setupReceiver),entries:[],history:[],finished:false,buttonOrder:'ab',matchSets:matchSets,setRules:readSetRules(matchSets),currentSet:1,completedSets:[],setWins:[0,0]};if(liveMatch&&liveMatch.courtCenter)syncLiveScore(null);el('scsScoreSetup').hidden=true;el('scsScoreLive').hidden=false;render(false);requestAnimationFrame(function(){var w=el('scsScoreTableWrap');if(w)w.scrollLeft=0;});}
+function setInitialRole(i){if(!state||state.entries.length)return;var serverTeam=teamOf(state.initialServer);if(teamOf(i)===serverTeam)state.initialServer=i;else state.initialReceiver=i;state.server=state.initialServer;state.positions=makePositions(state.initialServer,state.initialReceiver);render(false);}
+function snapshot(){return JSON.stringify({score:state.score,server:state.server,positions:state.positions,entries:state.entries,finished:state.finished,currentSet:state.currentSet,completedSets:state.completedSets,setWins:state.setWins})}
+function restore(s){var x=JSON.parse(s);state.score=x.score;state.server=x.server;state.positions=x.positions;state.entries=x.entries;state.finished=x.finished;state.currentSet=x.currentSet;state.completedSets=x.completedSets;state.setWins=x.setWins;render(false)}
+function setIsWon(a,b,setNo){var rule=state.setRules[setNo-1],hi=Math.max(a,b),lo=Math.min(a,b);return (hi>=rule.win&&hi-lo>=2)||hi>=rule.max;}
+function beginNextSet(){state.currentSet++;state.score=[0,0];state.entries=[];state.server=state.initialServer;state.positions=makePositions(state.initialServer,state.initialReceiver);}
+function addPoint(winnerTeam){if(!state||state.finished)return;state.history.push(snapshot());var servingTeam=teamOf(state.server);state.score[winnerTeam]++;var scoringPlayer;if(winnerTeam===servingTeam){scoringPlayer=state.server;var p=state.positions[winnerTeam];state.positions[winnerTeam]=[p[1],p[0]];}else{var court=(state.score[winnerTeam]%2===0)?0:1;state.server=state.positions[winnerTeam][court];scoringPlayer=state.server;}state.entries.push({player:scoringPlayer,score:state.score[winnerTeam],team:winnerTeam});var a=state.score[0],b=state.score[1];if(setIsWon(a,b,state.currentSet)){var setWinner=a>b?0:1;state.completedSets.push({set:state.currentSet,score:[a,b],winner:setWinner,server:state.server,positions:state.positions.map(function(p){return p.slice();}),entries:state.entries.map(function(e){return{player:e.player,score:e.score,team:e.team};})});state.setWins[setWinner]++;if(state.matchSets===1||state.setWins[setWinner]>=2){state.finished=true;}else{beginNextSet();}}render(true);syncLiveScore(null);}
+function undo(){
+ if(!state||!state.history.length||readOnly&&!teamEditMatchId)return;
+ var wasSaved=!!teamEditMatchId,priorFinished=state.finished,previous=state.history.pop();
+ restore(previous);
+ if(wasSaved){
+  // A saved result remains a saved result: only correct its score, never approval/status.
+  if(priorFinished&&!state.finished){
+   var last=state.completedSets[state.completedSets.length-1];
+   if(!last||Number(last.set)!==Number(state.currentSet)){
+    state.completedSets.push({set:state.currentSet,score:state.score.slice(),winner:state.score[0]>=state.score[1]?0:1,server:state.server,positions:state.positions.map(function(p){return p.slice();}),entries:state.entries.map(function(e){return Object.assign({},e);}),manuallyCorrected:true});
+   }
+  }
+  var current=state.completedSets[state.completedSets.length-1];
+  if(current){current.score=state.score.slice();current.entries=state.entries.map(function(e){return Object.assign({},e);});current.manuallyCorrected=true;}
+  state.finished=true;scoreEditDirty=true;render(false);
+ }else syncLiveScore(null);
+}
+function swapButtons(){if(!state)return;state.buttonOrder=state.buttonOrder==='ab'?'ba':'ab';render(false);}
+function buildTable(){var table=el('scsScoreTable'),cols=Math.max(30,state.entries.length+1),locked=state.entries.length>0||state.completedSets.length>0,h='<thead><tr><th>Player</th><th class="scs-score-role-head">S/R</th>';for(var c=0;c<cols;c++)h+='<th aria-label="Rally '+(c+1)+'"></th>';h+='</tr></thead><tbody>';for(var p=0;p<4;p++){var role=p===state.initialServer?'S':(p===state.initialReceiver?'R':'');var roleCls=role==='S'?' is-server':(role==='R'?' is-receiver':'');h+='<tr id="scsScoreRow'+p+'" class="'+(p<2?'team-a':'team-b')+'"><th><span>'+escapeHtml(state.names[p])+'</span><i>🏸</i><em></em></th><td class="scs-score-role-cell'+roleCls+(locked?' is-locked':'')+'"'+(locked?'':' onclick="SCSScoring.setInitialRole('+p+')"')+'>'+(role?'<span>'+role+'</span>':'')+'</td>';for(var c=0;c<cols;c++){var e=state.entries[c],v=(e&&e.player===p)?String(e.score):'';h+='<td class="'+(v?'has-score':'')+'">'+v+'</td>';}h+='</tr>';}h+='</tbody>';table.innerHTML=h;}
+function escapeHtml(s){return String(s).replace(/[&<>\"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]})}
+function completedSetText(){return state.completedSets.map(function(x){return 'Set '+x.set+' '+x.score[0]+'–'+x.score[1];}).join(' · ');}
+function selectCompletedSet(n,initial){if(!readOnly||!state)return;var x=state.completedSets.find(function(s){return Number(s.set)===Number(n);});if(!x)return;readOnlySet=Number(n);state.score=Array.isArray(x.score)?x.score.slice():[0,0];state.entries=Array.isArray(x.entries)?x.entries.map(function(e){return{player:e.player,score:e.score,team:e.team};}):[];if(Number.isInteger(x.server))state.server=x.server;if(Array.isArray(x.positions))state.positions=x.positions.map(function(p){return p.slice();});if(initial)render(false);else render(false);}
+function renderSetScores(){var box=el('scsScoreSetScores');if(!box)return;if(!state||state.matchSets!==3){if(teamEditMatchId&&state&&state.completedSets.length){var one=state.completedSets[0];box.hidden=false;box.innerHTML='<strong>Set 1 · Tap to correct</strong><div><button type="button" class="scs-score-set-score" onclick="SCSScoring.editSavedSet(1)">'+one.score.join(' – ')+'</button></div>';}else{box.hidden=true;box.innerHTML='';}return;}var done={};state.completedSets.forEach(function(x){done[x.set]=x.score;});var cards='';for(var i=1;i<=3;i++){var score=done[i]||(i===state.currentSet?state.score:[0,0]);var active=!state.finished&&i===state.currentSet;cards+='<div class="scs-score-set-score'+(active?' is-active':'')+(readOnly&&readOnlySet===i?' is-viewing':'')+'"'+(readOnly&&done[i]?' role="button" tabindex="0" onclick="SCSScoring.'+'selectCompletedSet('+i+')"':'')+'><span>Set '+i+'</span><strong>'+score[0]+' – '+score[1]+'</strong></div>';}if(teamEditMatchId){cards+='<button type="button" class="scs-score-set-score" onclick="SCSScoring.editSavedSet('+readOnlySet+')" aria-label="Correct selected set score">Correct Set '+readOnlySet+'</button>';}
+box.innerHTML='<strong>Set Scores <small>(Best of 3)</small></strong><div>'+cards+'</div>';box.hidden=false;}
+function render(autoScroll){if(!state)return;var actions=document.querySelector('.scs-score-side-actions');if(actions)actions.classList.toggle('portrait-reverse',state.buttonOrder==='ba');var addA=el('scsScoreAddA'),addB=el('scsScoreAddB');if(addA){addA.innerHTML='<span>'+escapeHtml(state.names[0])+'<br>'+escapeHtml(state.names[1])+'</span><strong>'+state.score[0]+'</strong><b>+</b>';addA.setAttribute('aria-label','Add point for '+state.names[0]+' and '+state.names[1]);}if(addB){addB.innerHTML='<span>'+escapeHtml(state.names[2])+'<br>'+escapeHtml(state.names[3])+'</span><strong>'+state.score[1]+'</strong><b>+</b>';addB.setAttribute('aria-label','Add point for '+state.names[2]+' and '+state.names[3]);}buildTable();renderSetScores();var server=state.server,court=state.positions[teamOf(server)][0]===server?'Right':'Left';var serverEl=el('scsScoreServer');if(serverEl)serverEl.textContent=state.names[server]+' · '+court+' court';for(var i=0;i<4;i++){var row=el('scsScoreRow'+i);row.classList.toggle('is-server',i===server);var em=row.querySelector('em');if(em)em.textContent=i===server?('SERVING · '+court.toUpperCase()):'';}el('scsScoreUndo').disabled=!state.history.length;addA.disabled=state.finished;addB.disabled=state.finished;var status=el('scsScoreStatus'),sets=completedSetText();if(status){if(state.finished){var mw=state.setWins[0]>state.setWins[1]?0:1;status.textContent=(mw===0?state.names[0]+' / '+state.names[1]:state.names[2]+' / '+state.names[3])+' wins'+(sets?' · '+sets:'');status.classList.add('is-finished');}else{var sr=state.setRules[state.currentSet-1];status.textContent=(sets?sets+' · ':'')+(state.matchSets===3?'Set '+state.currentSet+' · ':'1 Set · ')+'First to '+sr.win+' · Win by 2 · Max '+sr.max;status.classList.remove('is-finished');}}var send=el('scsScoreSendResult');if(send){send.hidden=teamEditMatchId?!scoreEditDirty:!(state.finished&&liveMatch);send.disabled=false;send.textContent=conductMode&&!teamEditMatchId?'Finish Scoring':'Finish & Send Result';}if(autoScroll&&state.entries.length){requestAnimationFrame(function(){var w=el('scsScoreTableWrap'),cells=w.querySelectorAll('thead th'),target=cells[state.entries.length+1];if(target)target.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});});}}
+window.SCSScoring={open:open,openConduct:openConduct,openGroupMatch:openGroupMatch,openCompleted:openCompleted,openTeamCompleted:openTeamCompleted,openEditableCompleted:openEditableCompleted,editSavedSet:editSavedSet,selectCompletedSet:selectCompletedSet,close:close,start:start,refreshSetupNames:refreshSetupNames,playerChanged:playerChanged,setInitialRole:setInitialRole,addPoint:addPoint,undo:undo,swapButtons:swapButtons,matchFormatChanged:matchFormatChanged,sendResult:sendResult};
+})();
